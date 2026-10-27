@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#123a63">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="СНВ Контроль">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>СНВ Контроль</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#182433;background:#f3f6fa}
+*{box-sizing:border-box}body{margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);background:#f3f6fa}
+header{background:#123a63;color:white;padding:20px 18px 18px}header h1{font-size:24px;margin:0 0 5px}header p{margin:0;color:#d9e6f3;font-size:13px}
+main{max-width:720px;margin:auto;padding:14px 14px 100px}.card{background:#fff;border:1px solid #e0e7ef;border-radius:16px;padding:15px;margin:0 0 12px;box-shadow:0 2px 8px #1636530a}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:16px;margin:0 0 8px}.muted{color:#64748b;font-size:13px}.row{display:flex;gap:9px;align-items:center}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+button{font:inherit;border:0;border-radius:11px;padding:12px 14px;background:#155da5;color:#fff;font-weight:650;cursor:pointer}button.secondary{background:#e8f0f8;color:#16446f}button.danger{background:#fff0f0;color:#a52828}button.small{padding:8px 10px;font-size:13px}button:disabled{opacity:.45}
+input,select,textarea{width:100%;font:inherit;border:1px solid #ccd7e3;border-radius:10px;padding:12px;background:white;color:#182433;min-width:0}label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.station{display:flex;align-items:center;gap:12px}.station-icon{width:44px;height:44px;border-radius:12px;background:#e8f0f8;color:#155da5;display:grid;place-items:center;font-size:21px;flex-shrink:0}.counter{border:1px solid #e0e7ef;border-radius:12px;padding:12px;margin-top:10px}.counter h3{margin-bottom:4px}.number{font-size:24px;font-weight:800;letter-spacing:-.5px}.result{background:#eaf6ef;border-radius:12px;padding:13px;margin-top:10px}.result strong{font-size:23px;color:#17633a}.pill{font-size:12px;padding:4px 8px;background:#eef2f7;border-radius:20px;color:#475569}.hidden{display:none!important}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #dce4ec;padding:9px 12px calc(9px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:8px;z-index:5}.nav button{flex:1;max-width:220px;background:#edf2f7;color:#24425f}.nav button.active{background:#155da5;color:#fff}.notice{background:#fff8e6;border:1px solid #f1dca0;border-radius:12px;padding:11px;font-size:13px;line-height:1.45}.empty{text-align:center;padding:24px 12px;color:#64748b}.topline{display:flex;align-items:center;gap:8px;margin-bottom:12px}.topline button{padding:8px 10px}
+@media(max-width:380px){.grid{grid-template-columns:1fr}.number{font-size:21px}}
+</style>
+</head>
+<body>
+<header><h1>СНВ Контроль</h1><p>Расчёт наработки по станциям и отдельным счётчикам</p></header>
+<main>
+<section id="view-stations">
+  <div class="row between" style="margin-bottom:12px"><div><h2 style="margin:0">Мои станции</h2><div class="muted">У каждой станции может быть любое число СНВ</div></div><button id="addStationBtn">+ Станция</button></div>
+  <div id="stationList"></div>
+</section>
+<section id="view-detail" class="hidden">
+  <div class="topline"><button class="secondary" id="backBtn">← Станции</button><span class="pill">Карточка станции</span></div>
+  <div class="card"><div class="row between"><div class="grow"><h2 id="detailName"></h2><div id="detailMeta" class="muted"></div></div><button class="secondary small" id="editStationBtn">Изменить</button></div>
+  <div class="actions"><button id="addCounterBtn">+ Добавить СНВ</button><button class="danger small" id="deleteStationBtn">Удалить станцию</button></div></div>
+  <div class="card"><h2>Счётчики СНВ</h2><div class="muted">У каждого счётчика своя дата и начальное/последнее расчётное показание.</div><div id="counterList"></div></div>
+</section>
+<section id="view-data" class="hidden">
+  <h2>Данные и резервная копия</h2>
+  <div class="card"><p>Экспортируй резервную копию регулярно. Файл содержит названия станций, счётчики и историю визитов.</p><div class="actions"><button id="exportBtn">Экспортировать JSON</button><button class="secondary" id="importBtn">Импортировать копию</button><input id="importFile" type="file" accept=".json,application/json" class="hidden"></div></div>
+  <div class="notice">Данные сохраняются в браузере на этом устройстве. Не очищай данные сайта и не удаляй веб-приложение без резервной копии. Не загружай резервную копию в публичный GitHub-репозиторий.</div>
+  <div class="card"><h3>Как рассчитывается</h3><p class="muted">Расчётное СНВ = последнее сохранённое показание + (число суток между визитами × 24).</p><p class="muted">После сохранения визита расчётное значение становится отправной точкой для следующего визита этого счётчика.</p></div>
+</section>
+</main>
+<nav class="nav"><button id="navStations" class="active">Станции</button><button id="navData">Данные</button></nav>
+
+<dialog id="stationDialog"><form method="dialog" id="stationForm"><h2 id="stationDialogTitle">Новая станция</h2><input id="stationId" type="hidden"><label for="stationName">Название станции</label><input id="stationName" required placeholder="Например, Станция Х"><label for="stationLocation">Объект / участок (необязательно)</label><input id="stationLocation" placeholder="Участок или примечание"><div class="actions"><button value="cancel" class="secondary">Отмена</button><button id="saveStationBtn" value="save">Сохранить</button></div></form></dialog>
+
+<dialog id="counterDialog"><form method="dialog" id="counterForm"><h2 id="counterDialogTitle">Добавить счётчик СНВ</h2><input id="counterStationId" type="hidden"><input id="counterId" type="hidden"><label for="counterName">Название / номер СНВ</label><input id="counterName" required placeholder="Например, СНВ № 1"><div class="grid"><div><label for="counterDate">Дата исходного показания</label><input id="counterDate" type="date" required></div><div><label for="counterValue">Показание, ч</label><input id="counterValue" type="number" min="0" step="1" required placeholder="32180"></div></div><label for="counterNote">Примечание (необязательно)</label><input id="counterNote" placeholder="Например, установлен новый счётчик"><div class="notice" style="margin-top:12px">Для нового счётчика введи показание с его дисплея и дату установки. Это будет новая точка отсчёта.</div><div class="actions"><button value="cancel" class="secondary">Отмена</button><button id="saveCounterBtn" value="save">Сохранить</button></div></form></dialog>
+
+<dialog id="calcDialog"><form method="dialog" id="calcForm"><h2 id="calcTitle">Расчёт СНВ</h2><input id="calcStationId" type="hidden"><input id="calcCounterId" type="hidden"><div class="card" style="padding:12px"><div class="muted">Последняя сохранённая точка отсчёта</div><div id="calcBaseline" class="number"></div><div id="calcBaselineDate" class="muted"></div></div><label for="visitDate">Дата текущего визита</label><input id="visitDate" type="date" required><div id="calcResult" class="result hidden"><div class="muted">Расчётное показание на текущую дату</div><strong id="calcValue"></strong><div id="calcElapsed" class="muted"></div></div><div class="actions"><button value="cancel" class="secondary">Отмена</button><button type="button" id="calculateBtn">Рассчитать</button><button type="button" id="saveVisitBtn" disabled>Сохранить визит</button></div></form></dialog>
+<script>
+const KEY='snv-control-data-v2';
+let db=loadDB(), currentStation=null, calcPending=null;
+function loadDB(){try{return JSON.parse(localStorage.getItem(KEY))||{stations:[]}}catch(e){return {stations:[]}}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(db))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function fmt(n){return Number(n).toLocaleString('ru-RU')}
+function dateFmt(s){if(!s)return '—';return new Date(s+'T12:00:00').toLocaleDateString('ru-RU')}
+function daysBetween(a,b){return Math.round((Date.parse(b+'T12:00:00Z')-Date.parse(a+'T12:00:00Z'))/86400000)}
+function show(view){['stations','detail','data'].forEach(v=>document.getElementById('view-'+v).classList.toggle('hidden',v!==view));document.getElementById('navStations').classList.toggle('active',view!=='data');document.getElementById('navData').classList.toggle('active',view==='data')}
+function stationById(id){return db.stations.find(s=>s.id===id)}
+function counterById(s,id){return s?.counters?.find(c=>c.id===id)}
+function renderStations(){
+ const el=document.getElementById('stationList');
+ if(!db.stations.length){el.innerHTML='<div class="card empty">Пока нет станций.<br>Нажми «+ Станция», чтобы добавить первую.</div>';return}
+ el.innerHTML=db.stations.map(s=>`<div class="card station"><div class="station-icon">⌁</div><div class="grow"><h3>${esc(s.name)}</h3><div class="muted">${esc(s.location||'')} · ${(s.counters||[]).length} СНВ</div></div><button class="secondary small" data-open="${s.id}">Открыть →</button></div>`).join('');
+ el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openStation(b.dataset.open));
+}
+function openStation(id){currentStation=id;renderDetail();show('detail')}
+function renderDetail(){
+ const s=stationById(currentStation);if(!s){show('stations');return}
+ document.getElementById('detailName').textContent=s.name;document.getElementById('detailMeta').textContent=s.location||'';
+ const el=document.getElementById('counterList');
+ if(!s.counters.length){el.innerHTML='<div class="empty">У этой станции пока нет счётчиков СНВ.<br>Добавь нужное количество.</div>';return}
+ el.innerHTML=s.counters.map(c=>`<div class="counter"><div class="row between"><div class="grow"><h3>${esc(c.name)}</h3><div class="muted">Точка отсчёта: ${dateFmt(c.baseDate)}</div></div><button class="secondary small" data-edit="${c.id}">Изменить</button></div><div class="number">${fmt(c.baseValue)} ч</div><div class="muted">Последнее сохранённое расчётное показание</div><div class="actions"><button data-calc="${c.id}">Рассчитать визит</button><button class="danger small" data-del="${c.id}">Удалить СНВ</button></div>${c.history?.length?`<details style="margin-top:10px"><summary>История визитов (${c.history.length})</summary>${c.history.slice().reverse().map(h=>`<p class="muted">${dateFmt(h.date)} — <b>${fmt(h.value)} ч</b></p>`).join('')}</details>`:''}</div>`).join('');
+ el.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editCounter(s.id,b.dataset.edit));
+ el.querySelectorAll('[data-calc]').forEach(b=>b.onclick=()=>startCalc(s.id,b.dataset.calc));
+ el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const c=counterById(s,b.dataset.del);if(confirm(`Удалить ${c.name} и его историю?`)){s.counters=s.counters.filter(x=>x.id!==c.id);persist();renderDetail()}});
+}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function addStation(){document.getElementById('stationForm').reset();document.getElementById('stationId').value='';document.getElementById('stationDialogTitle').textContent='Новая станция';document.getElementById('stationDialog').showModal()}
+function editStation(){const s=stationById(currentStation);document.getElementById('stationId').value=s.id;document.getElementById('stationName').value=s.name;document.getElementById('stationLocation').value=s.location||'';document.getElementById('stationDialogTitle').textContent='Изменить станцию';document.getElementById('stationDialog').showModal()}
+document.getElementById('stationForm').addEventListener('submit',e=>{if(e.submitter?.value!=='save')return;e.preventDefault();const id=document.getElementById('stationId').value,name=document.getElementById('stationName').value.trim(),location=document.getElementById('stationLocation').value.trim();if(!name)return;let s=id?stationById(id):null;if(s){s.name=name;s.location=location}else{db.stations.push({id:uid(),name,location,counters:[]})}persist();document.getElementById('stationDialog').close();renderStations();if(currentStation)renderDetail()});
+document.getElementById('deleteStationBtn').onclick=()=>{const s=stationById(currentStation);if(confirm(`Удалить станцию «${s.name}», все её СНВ и историю? Это нельзя отменить.`)){db.stations=db.stations.filter(x=>x.id!==s.id);currentStation=null;persist();renderStations();show('stations')}};
+function addCounter(){document.getElementById('counterForm').reset();document.getElementById('counterStationId').value=currentStation;document.getElementById('counterId').value='';document.getElementById('counterDate').value=today();document.getElementById('counterDialogTitle').textContent='Добавить счётчик СНВ';document.getElementById('counterDialog').showModal()}
+function editCounter(sid,cid){const c=counterById(stationById(sid),cid);document.getElementById('counterStationId').value=sid;document.getElementById('counterId').value=cid;document.getElementById('counterName').value=c.name;document.getElementById('counterDate').value=c.baseDate;document.getElementById('counterValue').value=c.baseValue;document.getElementById('counterNote').value=c.note||'';document.getElementById('counterDialogTitle').textContent='Изменить СНВ / задать новую точку отсчёта';document.getElementById('counterDialog').showModal()}
+document.getElementById('counterForm').addEventListener('submit',e=>{if(e.submitter?.value!=='save')return;e.preventDefault();const sid=document.getElementById('counterStationId').value,s=stationById(sid),id=document.getElementById('counterId').value,name=document.getElementById('counterName').value.trim(),date=document.getElementById('counterDate').value,value=Number(document.getElementById('counterValue').value),note=document.getElementById('counterNote').value.trim();if(!s||!name||!date||!Number.isFinite(value)||value<0)return;if(id){const c=counterById(s,id);if(date!==c.baseDate||value!==c.baseValue){if(!confirm('Изменить точку отсчёта? Старые записи истории сохранятся, а следующие расчёты пойдут от указанной даты и показания.'))return}c.name=name;c.baseDate=date;c.baseValue=value;c.note=note}else{s.counters.push({id:uid(),name,baseDate:date,baseValue:value,note,history:[]})}persist();document.getElementById('counterDialog').close();renderDetail();renderStations()});
+function startCalc(sid,cid){const s=stationById(sid),c=counterById(s,cid);document.getElementById('calcStationId').value=sid;document.getElementById('calcCounterId').value=cid;document.getElementById('calcTitle').textContent=s.name+' — '+c.name;document.getElementById('calcBaseline').textContent=fmt(c.baseValue)+' ч';document.getElementById('calcBaselineDate').textContent='Дата точки отсчёта: '+dateFmt(c.baseDate);document.getElementById('visitDate').value=today();document.getElementById('calcResult').classList.add('hidden');document.getElementById('saveVisitBtn').disabled=true;calcPending=null;document.getElementById('calcDialog').showModal()}
+function calculate(){const sid=document.getElementById('calcStationId').value,cid=document.getElementById('calcCounterId').value,s=stationById(sid),c=counterById(s,cid),date=document.getElementById('visitDate').value;if(!date){alert('Укажи дату визита.');return}const days=daysBetween(c.baseDate,date);if(days<0){alert('Дата визита не может быть раньше даты точки отсчёта.');return}const value=Number(c.baseValue)+days*24;calcPending={sid,cid,date,value,days};document.getElementById('calcValue').textContent=fmt(value)+' ч';document.getElementById('calcElapsed').textContent=`Прошло ${days} суток · добавлено ${fmt(days*24)} ч`;document.getElementById('calcResult').classList.remove('hidden');document.getElementById('saveVisitBtn').disabled=false}
+document.getElementById('calculateBtn').onclick=calculate;
+document.getElementById('saveVisitBtn').onclick=()=>{if(!calcPending)return;const s=stationById(calcPending.sid),c=counterById(s,calcPending.cid);if(!c)return;if(calcPending.date===c.baseDate){if(!confirm('Дата совпадает с точкой отсчёта. Сохранить показание без изменения наработки?'))return}c.history=c.history||[];c.history.push({date:calcPending.date,value:calcPending.value,days:calcPending.days});c.baseDate=calcPending.date;c.baseValue=calcPending.value;persist();document.getElementById('calcDialog').close();renderDetail();renderStations()};
+document.getElementById('addStationBtn').onclick=addStation;document.getElementById('editStationBtn').onclick=editStation;document.getElementById('addCounterBtn').onclick=addCounter;document.getElementById('backBtn').onclick=()=>{currentStation=null;renderStations();show('stations')};document.getElementById('navStations').onclick=()=>{renderStations();show('stations')};document.getElementById('navData').onclick=()=>show('data');
+document.getElementById('exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify({app:'SNV-Control',version:2,exportedAt:new Date().toISOString(),...db},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='snv-control-backup-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!Array.isArray(x.stations))throw Error('Неверный формат');if(!confirm('Импорт заменит текущий список станций и историю. Продолжить?'))return;db={stations:x.stations};persist();renderStations();show('stations');alert('Резервная копия восстановлена.')}catch(err){alert('Не удалось импортировать файл. Проверь, что это резервная копия СНВ Контроль.')}e.target.value=''};
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+renderStations();
+</script>
+</body></html>
